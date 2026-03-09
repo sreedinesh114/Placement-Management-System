@@ -7,13 +7,17 @@ import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
-import { Plus, Search, Building2, Calendar } from 'lucide-react';
+import { Plus, Search, Building2, Calendar, Pencil, Trash2 } from 'lucide-react';
 
 export const Companies = () => {
   const { token, API } = useAuth();
   const [companies, setCompanies] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDialog, setShowDialog] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [industry, setIndustry] = useState("");
   const [newCompany, setNewCompany] = useState({
     name: '',
     industry: '',
@@ -52,6 +56,31 @@ export const Companies = () => {
       toast.error('Failed to add company');
     }
   };
+  const handleEditCompany = (company) => {
+  setSelectedCompany(company);
+  setShowEditDialog(true);
+  setCompanyName(company.name);
+setIndustry(company.industry);
+};
+
+  const handleDeleteCompany = async (companyId) => {
+  if (!window.confirm("Are you sure you want to delete this company?")) return;
+
+  try {
+    await axios.delete(`${API}/companies/${companyId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    toast.success("Company deleted successfully");
+    fetchCompanies();
+
+  } catch (error) {
+    console.log(error);
+    toast.error(error.response?.data?.detail || "Delete failed");
+  }
+};
 
   const filteredCompanies = companies.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -231,23 +260,38 @@ export const Companies = () => {
                   <span className="font-semibold">{company.last_visit || 'N/A'}</span>
                 </div>
               </div>
-              <a 
-                href={company.website || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="block"
-              >
-                <Button 
-                  variant="outline" 
-                  className="w-full" 
-                  data-testid={`view-details-${company.id}`}
-                  disabled={!company.website}
-                >
-                  View Details
-                </Button>
-              </a>
-            </CardContent>
-          </Card>
+    <div className="flex gap-2 mt-3">
+      <a
+        href={company.website || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Button
+          variant="outline"
+          disabled={!company.website}
+        >
+          View Details
+        </Button>
+      </a>
+
+      <Button
+        variant="outline"
+        onClick={() => handleEditCompany(company)}
+      >
+        <Pencil size={16} className="mr-1" />
+        Edit
+      </Button>
+
+      <Button
+        variant="destructive"
+        onClick={() => handleDeleteCompany(company.id)}
+      >
+        <Trash2 size={16} className="mr-1" />
+        Delete
+      </Button>
+    </div>
+  </CardContent>
+</Card>
         ))}
       </div>
     </div>

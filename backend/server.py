@@ -225,6 +225,18 @@ async def create_company(company: Company, current_user: dict = Depends(get_curr
     company_dict['created_at'] = company_dict['created_at'].isoformat()
     await db.companies.insert_one(company_dict)
     return company
+@api_router.delete("/companies/{company_id}")
+async def delete_company(company_id: str, current_user: dict = Depends(get_current_user)):
+
+    if current_user["role"] != "officer":
+        raise HTTPException(status_code=403, detail="Only officers can delete companies")
+
+    result = await db.companies.delete_one({"id": company_id})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    return {"message": "Company deleted successfully"}
 
 # Drive Routes
 @api_router.get("/drives")
@@ -265,6 +277,8 @@ async def get_students(current_user: dict = Depends(get_current_user)):
         student['total_applications'] = len(apps)
         student['placed'] = any(app['status'] == 'selected' for app in apps)
         student['offers'] = len([app for app in apps if app['status'] == 'selected'])
+
+    return students
     
 
 @api_router.get("/students/export")
@@ -279,7 +293,7 @@ async def export_students(current_user: dict = Depends(get_current_user)):
         student['placed'] = any(app['status'] == 'selected' for app in apps)
         student['offers'] = len([app for app in apps if app['status'] == 'selected'])
     
-    csv_content = "Name,Email,Branch,Roll Number,CGPA,10th%,12th%,Backlogs,Offers,Status\\n"
+    csv_content = "Name,Email,Branch,Roll Number,CGPA,10th%,12th%,Backlogs,Offers,Status\n"
     for student in students:
         csv_content += f"{student.get('first_name', '')} {student.get('last_name', '')},"
         csv_content += f"{student.get('email', '')},"
@@ -290,7 +304,7 @@ async def export_students(current_user: dict = Depends(get_current_user)):
         csv_content += f"{student.get('twelfth_percentage', 0)},"
         csv_content += f"{student.get('backlogs', 0)},"
         csv_content += f"{student.get('offers', 0)},"
-        csv_content += f"{'Placed' if student.get('placed') else 'Pending'}\\n"
+        csv_content += f"{'Placed' if student.get('placed') else 'Pending'}\n"
     
     from fastapi.responses import Response
     return Response(
@@ -531,6 +545,34 @@ async def get_eligibility(current_user: dict = Depends(get_current_user)):
         "total_drives": total_drives,
         "percentage": round(percentage, 0)
     }
+@api_router.get("/drives/{drive_id}/students")
+async def get_drive_students(drive_id: str, current_user: dict = Depends(get_current_user)):
+
+    if current_user["role"] != "officer":
+        raise HTTPException(status_code=403, detail="Only officers can view applicants")
+
+    applications = await db.applications.find({"drive_id": drive_id}).to_list(1000)
+
+    students = []
+
+    for app in applications:
+        student = await db.users.find_one(
+            {"id": app["student_id"]},
+            {"_id": 0, "password": 0}
+        )
+
+        if student:
+            students.append({
+                "name": student.get("first_name","") + " " + student.get("last_name",""),
+                "email": student.get("email"),
+                "branch": student.get("branch"),
+                "cgpa": student.get("cgpa"),
+                "status": student.get("status")
+            })
+
+        print("Applications found:", applications)
+
+    return students
 
 app.include_router(api_router)
 
@@ -551,3 +593,4 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+

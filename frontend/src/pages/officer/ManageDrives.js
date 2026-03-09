@@ -7,13 +7,16 @@ import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { Plus, Search, Trash2, Download } from 'lucide-react';
 
 export const ManageDrives = () => {
   const { token, API } = useAuth();
   const [drives, setDrives] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDialog, setShowDialog] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [selectedDriveId, setSelectedDriveId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const [newDrive, setNewDrive] = useState({
     company: '',
     role: '',
@@ -69,7 +72,46 @@ export const ManageDrives = () => {
       toast.error('Failed to delete drive');
     }
   };
+  const handleViewApplicants = async (driveId) => {
+  try {
+    const res = await axios.get(`${API}/drives/${driveId}/students`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
 
+    setSelectedStudents(res.data);
+    setSelectedDriveId(driveId);
+    setShowModal(true);
+
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to load applicants");
+  }
+};
+const downloadApplicants = async () => {
+  try {
+    const res = await axios.get(
+      `${API}/drives/${selectedDriveId}/students/export`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        responseType: "blob"
+      }
+    );
+
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "drive_applicants.csv");
+    document.body.appendChild(link);
+    link.click();
+
+  } catch (error) {
+    toast.error("Failed to download CSV");
+  }
+};
   const filteredDrives = drives.filter(d => 
     d.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.role.toLowerCase().includes(searchTerm.toLowerCase())
@@ -233,10 +275,19 @@ export const ManageDrives = () => {
                       <p className="text-sm text-gray-600">Location</p>
                       <p className="font-semibold">{drive.location}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Registrations</p>
-                      <p className="font-semibold">{drive.registrations}/{drive.slots}</p>
-                    </div>
+                   <div>
+  <p className="text-sm text-gray-600">Registrations</p>
+  <p className="font-semibold">{drive.registrations}/{drive.slots}</p>
+
+  <Button
+    className="mt-2"
+    size="sm"
+    onClick={() => handleViewApplicants(drive.id)}
+  >
+    View Applicants
+  </Button>
+</div>
+
                   </div>
                 </div>
               </div>
@@ -244,6 +295,52 @@ export const ManageDrives = () => {
           </Card>
         ))}
       </div>
+      {showModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-lg w-3/4 max-h-[80vh] overflow-auto">
+      <div className="flex justify-between items-center mb-4">
+  <h2 className="text-xl font-bold">Drive Applicants</h2>
+
+  <Button onClick={downloadApplicants}>
+  <Download size={16} className="mr-2" />
+  Download
+</Button>
+</div>
+
+      {selectedStudents.length === 0 ? (
+        <p>No students applied yet</p>
+      ) : (
+        <table className="w-full border">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 border">Name</th>
+              <th className="p-2 border">Email</th>
+              <th className="p-2 border">Branch</th>
+              <th className="p-2 border">CGPA</th>
+              <th className="p-2 border">Status</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {selectedStudents.map((s, i) => (
+              <tr key={i}>
+                <td className="border p-2">{s.name}</td>
+                <td className="border p-2">{s.email}</td>
+                <td className="border p-2">{s.branch}</td>
+                <td className="border p-2">{s.cgpa}</td>
+                <td className="border p-2">{s.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="mt-4 text-right">
+        <Button onClick={() => setShowModal(false)}>Close</Button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

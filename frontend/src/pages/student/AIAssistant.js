@@ -65,6 +65,27 @@ export const AIAssistant = () => {
     'Skills I should learn for better placements'
   ];
 
+  const sendQuickMessage = async (message) => {
+  try {
+
+    // add user message
+    setMessages(prev => [...prev, { role: "user", content: message }]);
+
+    const res = await axios.post(
+      `${API}/ai-assistant/chat`,
+      { message },
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+
+    // add AI response
+    setMessages(prev => [...prev, { role: "assistant", content: res.data.response }]);
+
+  } catch (error) {
+    toast.error("AI assistant failed");
+  }
+};
   return (
     <div className="p-8" data-testid="ai-assistant-page">
       <div className="mb-8">
@@ -179,16 +200,24 @@ export const AIAssistant = () => {
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start" data-testid="resume-review-button">
-                Get Resume Review
-              </Button>
-              <Button variant="outline" className="w-full justify-start" data-testid="interview-practice-button">
-                Practice Interview
-              </Button>
-              <Button variant="outline" className="w-full justify-start" data-testid="company-matching-button">
-                Company Matching
-              </Button>
+            <CardContent className="space">
+              <Button
+  onClick={() => sendQuickMessage("Review my resume and suggest improvements")}
+>
+  Get Resume Review
+</Button>
+
+<Button
+  onClick={() => sendQuickMessage("Conduct a mock interview for a software developer role")}
+>
+  Practice Interview
+</Button>
+
+<Button
+  onClick={() => sendQuickMessage("Suggest companies I should target based on my skills")}
+>
+  Company Matching
+</Button>
             </CardContent>
           </Card>
         </div>
