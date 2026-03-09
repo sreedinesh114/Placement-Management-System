@@ -1,110 +1,98 @@
-Placement Management System
+# Placement Management System
 
-A full-stack Placement Management Portal designed to help colleges manage campus recruitment efficiently.
-It allows students to apply for drives, officers to manage companies and drives, and provides AI-powered career assistance.
+A full-stack **Placement Management Portal** built using **React, FastAPI, and MongoDB** to help colleges manage campus recruitment efficiently.
 
-Features
-Student Portal
+This system allows **students to apply for placement drives**, while **placement officers manage companies, drives, and applicants**.
 
-Student registration & login
+---
 
-View available placement drives
+# Features
 
-Apply for drives
+## Student Portal
+- Student Registration & Login
+- View Placement Drives
+- Apply for Drives
+- Upload Resume
+- Track Application Status
+- AI Career Assistant
 
-Upload resume
+## Officer Dashboard
+- Manage Companies
+- Create and Manage Drives
+- View Applicants
+- Download Applicant List (CSV)
+- Student Analytics
+- Send Notifications
 
-Track application status
+## AI Assistant
+- Resume review suggestions
+- Interview preparation
+- Company matching recommendations
+- Career guidance
 
-AI career assistant
+---
 
-Officer Dashboard
+# Tech Stack
 
-Manage companies
+## Frontend
+- React.js
+- Tailwind CSS
+- Axios
+- Lucide Icons
 
-Create and manage drives
+## Backend
+- FastAPI
+- Python
+- JWT Authentication
 
-View applicants
+## Database
+- MongoDB
 
-Download applicant list (CSV)
+## AI
+- Groq LLaMA Model
 
-Student analytics
+---
 
-Send notifications
-
-AI Assistant
-
-Resume review suggestions
-
-Interview preparation
-
-Company matching recommendations
-
-Career guidance
-
-Tech Stack
-
-Frontend
-
-React.js
-
-Tailwind CSS
-
-Axios
-
-Lucide Icons
-
-Backend
-
-FastAPI
-
-Python
-
-JWT Authentication
-
-Database
-
-MongoDB
-
-AI
-
-Groq LLaMA model
-
-Project Structure
+# Project Structure
 Placement-Management-System
 │
 ├── backend
-│   ├── server.py
-│   ├── requirements.txt
-│   ├── uploads/
-│   └── venv/
+│ ├── server.py
+│ ├── requirements.txt
+│ ├── uploads/
+│ └── venv/
 │
 ├── frontend
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   └── tailwind.config.js
+│ ├── src/
+│ ├── public/
+│ ├── package.json
+│ └── tailwind.config.js
 │
 ├── tests
 └── README.md
-Prerequisites
+---
+
+# Prerequisites
 
 Make sure the following are installed:
 
-Python 3.9+
+- Python 3.9+
+- Node.js 18+
+- MongoDB
+- Git
 
-Node.js 18+
+---
 
-MongoDB
+# Backend Setup (FastAPI)
 
-Git
+### 1. Navigate to backend folder
 
-Backend Setup (FastAPI)
-1. Navigate to backend folder
+```bash
 cd backend
-2. Create virtual environment
+### 2. Create virtual environment
 python -m venv venv
-3. Activate virtual environment
+
+###3. Activate virtual environment
 
 Windows
 
@@ -113,9 +101,9 @@ venv\Scripts\activate
 Mac/Linux
 
 source venv/bin/activate
-4. Install dependencies
+###4. Install dependencies
 pip install -r requirements.txt
-5. Configure environment variables
+###5. Configure environment variables
 
 Create a .env file inside backend folder.
 
@@ -125,17 +113,18 @@ MONGO_URL=your_mongodb_connection_string
 DB_NAME=placement_db
 JWT_SECRET=your_secret_key
 GROQ_API_KEY=your_groq_api_key
-6. Run backend server
+###6. Run backend server
 uvicorn server:app --reload --port 8001
 
 Backend will run at:
 
 http://localhost:8001
 
-API Docs:
+API Documentation:
 
 http://localhost:8001/docs
-Frontend Setup (React)
+
+###*Frontend Setup (React)*
 1. Navigate to frontend folder
 cd frontend
 2. Install dependencies
@@ -146,6 +135,7 @@ npm run dev
 Frontend will run at:
 
 http://localhost:3000
+
 Default Roles
 
 The system supports two roles:
@@ -168,42 +158,21 @@ View applicants
 
 Download reports
 
-Screenshots
-
-You can add screenshots of:
-
-Student Dashboard
-
-Officer Dashboard
-
-Manage Drives
-
-AI Assistant
-
 Future Improvements
 
-Resume AI analyzer
+Resume AI Analyzer
 
-Interview scheduling
+Interview Scheduling
 
-Email notifications
+Email Notifications
 
-Company logo upload
+Company Logo Upload
 
-Admin dashboard
+Admin Dashboard
 
 Author
 
 Dinesh S
+
 GitHub:
 https://github.com/sreedinesh114
-
-License
-
-This project is developed for educational purposes (Final Year Project).
-
-
-
-screenshots
-
-demo link
