@@ -1,9 +1,12 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, status, Form
+from fastapi.responses import StreamingResponse, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi.staticfiles import StaticFiles
 import os
+import shutil
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
@@ -14,6 +17,8 @@ import bcrypt
 import jwt
 from groq import Groq
 import json
+from openpyxl import Workbook
+from io import BytesIO
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -86,6 +91,10 @@ class Drive(BaseModel):
     slots: int = 50
     registrations: int = 0
     status: str = "upcoming"
+    venue: Optional[str] = ""
+    reporting_time: Optional[str] = ""
+    dept_eligibility: Optional[str] = ""
+    selection_process: Optional[str] = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Application(BaseModel):
@@ -225,18 +234,6 @@ async def create_company(company: Company, current_user: dict = Depends(get_curr
     company_dict['created_at'] = company_dict['created_at'].isoformat()
     await db.companies.insert_one(company_dict)
     return company
-@api_router.delete("/companies/{company_id}")
-async def delete_company(company_id: str, current_user: dict = Depends(get_current_user)):
-
-    if current_user["role"] != "officer":
-        raise HTTPException(status_code=403, detail="Only officers can delete companies")
-
-    result = await db.companies.delete_one({"id": company_id})
-
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Company not found")
-
-    return {"message": "Company deleted successfully"}
 
 # Drive Routes
 @api_router.get("/drives")
@@ -277,9 +274,7 @@ async def get_students(current_user: dict = Depends(get_current_user)):
         student['total_applications'] = len(apps)
         student['placed'] = any(app['status'] == 'selected' for app in apps)
         student['offers'] = len([app for app in apps if app['status'] == 'selected'])
-
     return students
-    
 
 @api_router.get("/students/export")
 async def export_students(current_user: dict = Depends(get_current_user)):
@@ -305,8 +300,6 @@ async def export_students(current_user: dict = Depends(get_current_user)):
         csv_content += f"{student.get('backlogs', 0)},"
         csv_content += f"{student.get('offers', 0)},"
         csv_content += f"{'Placed' if student.get('placed') else 'Pending'}\n"
-    
-    from fastapi.responses import Response
     return Response(
         content=csv_content,
         media_type="text/csv",
@@ -527,6 +520,7 @@ Give career guidance and placement advice.
     except Exception as e:
         print("GROQ ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/ai-assistant/eligibility")
 async def get_eligibility(current_user: dict = Depends(get_current_user)):
     user = await db.users.find_one({"id": current_user['user_id']}, {"_id": 0, "password": 0})
@@ -547,13 +541,16 @@ async def get_eligibility(current_user: dict = Depends(get_current_user)):
     }
 @api_router.get("/drives/{drive_id}/students")
 async def get_drive_students(drive_id: str, current_user: dict = Depends(get_current_user)):
-
-    if current_user["role"] != "officer":
+    
+    if current_user['role'] != 'officer':
         raise HTTPException(status_code=403, detail="Only officers can view applicants")
 
-    applications = await db.applications.find({"drive_id": drive_id}).to_list(1000)
+    applications = await db.applications.find(
+        {"drive_id": drive_id},
+        {"_id": 0}
+    ).to_list(1000)
 
-    students = []
+    result = []
 
     for app in applications:
         student = await db.users.find_one(
@@ -562,18 +559,90 @@ async def get_drive_students(drive_id: str, current_user: dict = Depends(get_cur
         )
 
         if student:
-            students.append({
-                "name": student.get("first_name","") + " " + student.get("last_name",""),
-                "email": student.get("email"),
-                "branch": student.get("branch"),
-                "cgpa": student.get("cgpa"),
-                "status": student.get("status")
+            result.append({
+                "name": f"{student.get('first_name','')} {student.get('last_name','')}",
+                "roll_number": student.get("roll_number", ""),
+                "year": student.get("year", ""),
+                "email": student.get("email", ""),
+                "branch": student.get("branch", ""),
+                
             })
 
-        print("Applications found:", applications)
+    return result
+    
+@api_router.get("/drives/{drive_id}/students/export-excel")
+async def export_students_excel(drive_id: str, current_user: dict = Depends(get_current_user)):
 
-    return students
+    applications = await db.applications.find(
+        {"drive_id": drive_id},
+        {"_id": 0}
+    ).to_list(1000)
 
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Applicants"
+
+    ws.append(["Name", "Roll Number", "Year", "Email", "Branch"])
+
+    for app in applications:
+        student = await db.users.find_one(
+            {"id": app["student_id"]},
+            {"_id": 0}
+        )
+
+        if student:
+            ws.append([
+                f"{student.get('first_name','')} {student.get('last_name','')}",
+                student.get("roll_number", ""),
+                student.get("year", ""),
+                student.get("email", ""),
+                student.get("branch", ""),
+            ])
+
+    stream = BytesIO()
+    wb.save(stream)
+    stream.seek(0)
+
+    return StreamingResponse(
+        stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=applicants.xlsx"}
+    )
+@api_router.post("/updates")
+async def create_update(
+    title: str = Form(...),
+    message: str = Form(...),
+    image: UploadFile = File(None),
+    current_user: dict = Depends(get_current_user)
+):
+    if current_user["role"] != "officer":
+        raise HTTPException(status_code=403, detail="Only officers can post updates")
+
+    image_url = None
+
+    if image:
+        os.makedirs("uploads", exist_ok=True)
+
+        file_path = f"uploads/{image.filename}"
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        image_url = file_path  # save path
+
+    update = {
+        "id": str(uuid.uuid4()),
+        "title": title,
+        "message": message,
+        "image": image_url,   # ✅ save image
+        "created_at": datetime.now(timezone.utc)
+    }
+
+    await db.updates.insert_one(update)
+
+    return {"message": "Update posted"}
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 app.include_router(api_router)
 
 app.add_middleware(
@@ -593,4 +662,3 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-
