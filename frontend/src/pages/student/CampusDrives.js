@@ -177,6 +177,11 @@ export const CampusDrives = () => {
                   <div className="text-sm text-gray-600">
                     <span className="font-medium">Min CGPA:</span> {drive.min_cgpa}
                   </div>
+                  <div className="mt-3 text-sm text-gray-600 space-y-1">
+                    <p><b>Venue:</b> {drive.venue || "N/A"}</p>
+                    <p><b>Reporting Time:</b> {drive.reporting_time || "N/A"}</p>
+                    <p><b>Eligible Dept:</b> {drive.dept_eligibility || "All"}</p>
+                    </div>
                 </div>
 
                 {applied ? (
