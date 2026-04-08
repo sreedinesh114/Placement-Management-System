@@ -7,24 +7,28 @@ import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
 import { toast } from 'sonner';
-import { Plus, Search, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
+import { Download } from "lucide-react";
 
 export const ManageDrives = () => {
   const { token, API } = useAuth();
   const [drives, setDrives] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDialog, setShowDialog] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [showApplicants, setShowApplicants] = useState(false);
   const [selectedDriveId, setSelectedDriveId] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [applicants, setApplicants] = useState([]);
   const [newDrive, setNewDrive] = useState({
     company: '',
     role: '',
     package: '',
     drive_date: '',
-    location: 'Campus',
+    reporting_time: '',
+    dept_eligibility: [],
+    location: '',
     min_cgpa: 0,
     slots: 50,
+    selection_process: '',
     status: 'upcoming',
     website: ''
   });
@@ -72,31 +76,27 @@ export const ManageDrives = () => {
       toast.error('Failed to delete drive');
     }
   };
-  const handleViewApplicants = async (driveId) => {
+  const fetchApplicants = async (driveId) => {
   try {
     const res = await axios.get(`${API}/drives/${driveId}/students`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     });
 
-    setSelectedStudents(res.data);
+    setApplicants(res.data);
     setSelectedDriveId(driveId);
-    setShowModal(true);
+    setShowApplicants(true);
 
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     toast.error("Failed to load applicants");
   }
-};
-const downloadApplicants = async () => {
+  };
+  const downloadExcel = async () => {
   try {
     const res = await axios.get(
-      `${API}/drives/${selectedDriveId}/students/export`,
+      `${API}/drives/${selectedDriveId}/students/export-excel`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
+        headers: { Authorization: `Bearer ${token}` },
         responseType: "blob"
       }
     );
@@ -104,12 +104,12 @@ const downloadApplicants = async () => {
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", "drive_applicants.csv");
+    link.setAttribute("download", "applicants.xlsx");
     document.body.appendChild(link);
     link.click();
 
-  } catch (error) {
-    toast.error("Failed to download CSV");
+  } catch (err) {
+    toast.error("Excel download failed");
   }
 };
   const filteredDrives = drives.filter(d => 
@@ -158,7 +158,7 @@ const downloadApplicants = async () => {
                     />
                   </div>
                   <div>
-                    <Label>Job Role</Label>
+                    <Label>Job Roles</Label>
                     <Input
                       value={newDrive.role}
                       onChange={(e) => setNewDrive({ ...newDrive, role: e.target.value })}
@@ -187,6 +187,26 @@ const downloadApplicants = async () => {
                     />
                   </div>
                   <div>
+  <Label>Reporting Time</Label>
+  <Input
+    type="time"
+    value={newDrive.reporting_time}
+    onChange={(e) =>
+      setNewDrive({ ...newDrive, reporting_time: e.target.value })
+    }
+  />
+</div>
+<div>
+  <Label>Venue</Label>
+  <Input
+    value={newDrive.venue}
+    onChange={(e) =>
+      setNewDrive({ ...newDrive, venue: e.target.value })
+    }
+    placeholder="e.g., Seminar Hall A"
+  />
+</div>
+                  <div>
                     <Label>Location</Label>
                     <Input
                       value={newDrive.location}
@@ -213,6 +233,29 @@ const downloadApplicants = async () => {
                       data-testid="drive-slots-input"
                     />
                   </div>
+                  <div>
+  <Label>Department Eligibility</Label>
+  <Input
+    value={newDrive.dept_eligibility}
+    onChange={(e) =>
+      setNewDrive({ ...newDrive, dept_eligibility: e.target.value })
+    }
+    placeholder="e.g., CSE, IT, ECE"
+  />
+</div>
+
+<div>
+  <Label>Selection Process</Label>
+  <textarea
+    className="w-full border rounded p-2"
+    rows={3}
+    value={newDrive.selection_process}
+    onChange={(e) =>
+      setNewDrive({ ...newDrive, selection_process: e.target.value })
+    }
+    placeholder="e.g., Aptitude → Technical → HR"
+  />
+</div>
                 </div>
                 <Button type="submit" className="w-full" data-testid="submit-drive-button">Create Drive</Button>
               </form>
@@ -275,72 +318,76 @@ const downloadApplicants = async () => {
                       <p className="text-sm text-gray-600">Location</p>
                       <p className="font-semibold">{drive.location}</p>
                     </div>
-                   <div>
-  <p className="text-sm text-gray-600">Registrations</p>
-  <p className="font-semibold">{drive.registrations}/{drive.slots}</p>
-
-  <Button
-    className="mt-2"
-    size="sm"
-    onClick={() => handleViewApplicants(drive.id)}
-  >
-    View Applicants
-  </Button>
-</div>
-
+                    <div>
+                      <p className="text-sm text-gray-600">Registrations</p>
+                      <p className="font-semibold">{drive.registrations}/{drive.slots}</p>
+                    </div>
                   </div>
+                  <Button
+  onClick={() => fetchApplicants(drive.id)}
+  className="mt-3"
+>
+  View Applicants
+</Button>
                 </div>
               </div>
+    <Dialog open={showApplicants} onOpenChange={setShowApplicants}>
+    <DialogContent className="max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>Drive Applicants</DialogTitle>
+      </DialogHeader>
+
+      {/* Applicants List */}
+      <div className="max-h-[400px] overflow-y-auto">
+      <table className="w-full border rounded-lg overflow-hidden">
+
+        <thead className="bg-gray-100 text-left">
+          <tr>
+            <th className="p-3 border">S.No</th>
+            <th className="p-3 border">Name</th>
+            <th className="p-3 border">Roll Number</th>
+            <th className="p-3 border">Year</th>
+            <th className="p-3 border">Email</th>
+            <th className="p-3 border">Branch</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {applicants.length === 0 ? (
+            <tr>
+              <td colSpan="4" className="text-center p-4">
+                No applicants found
+              </td>
+            </tr>
+          ) : (
+            applicants.map((a, i) => (
+              <tr key={i} className="hover:bg-gray-50">
+                <td className="p-3 border">{i + 1}</td>
+                <td className="p-3 border font-medium">{a.name}</td>
+                <td className="p-3 border">{a.roll_number}</td>
+                <td className="p-3 border">{a.year}</td>
+                <td className="p-3 border">{a.email}</td>
+                <td className="p-3 border">{a.branch}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+
+    {/* DOWNLOAD BUTTON */}
+    <div className="mt-4 flex justify-end">
+      <Button onClick={downloadExcel}>
+        Download
+      </Button>
+    </div>
+    </DialogContent>
+  </Dialog>
             </CardContent>
           </Card>
         ))}
       </div>
-      {showModal && (
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-lg w-3/4 max-h-[80vh] overflow-auto">
-      <div className="flex justify-between items-center mb-4">
-  <h2 className="text-xl font-bold">Drive Applicants</h2>
-
-  <Button onClick={downloadApplicants}>
-  <Download size={16} className="mr-2" />
-  Download
-</Button>
-</div>
-
-      {selectedStudents.length === 0 ? (
-        <p>No students applied yet</p>
-      ) : (
-        <table className="w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Name</th>
-              <th className="p-2 border">Email</th>
-              <th className="p-2 border">Branch</th>
-              <th className="p-2 border">CGPA</th>
-              <th className="p-2 border">Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {selectedStudents.map((s, i) => (
-              <tr key={i}>
-                <td className="border p-2">{s.name}</td>
-                <td className="border p-2">{s.email}</td>
-                <td className="border p-2">{s.branch}</td>
-                <td className="border p-2">{s.cgpa}</td>
-                <td className="border p-2">{s.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <div className="mt-4 text-right">
-        <Button onClick={() => setShowModal(false)}>Close</Button>
-      </div>
     </div>
-  </div>
-)}
-    </div>
+  
   );
 };
