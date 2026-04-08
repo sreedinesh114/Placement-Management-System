@@ -74,19 +74,23 @@ export const OfficerDashboard = () => {
     }
   };
 
-  const handleCreateNotification = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.post(`${API}/notifications`, newNotification, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Notification posted successfully');
-      setShowNotificationDialog(false);
-      setNewNotification({ title: '', message: '', target_role: 'student' });
-    } catch (error) {
-      toast.error('Failed to post notification');
+const handlePostUpdate = async () => {
+  const formData = new FormData();
+
+  formData.append("title", postData.title);
+  formData.append("message", postData.message);
+
+  if (postData.image) {
+    formData.append("image", postData.image);
+  }
+
+  await axios.post(`${API}/updates`, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data"
     }
-  };
+  });
+};
 
   const handleDeleteFeedback = async (formId) => {
     try {
@@ -99,6 +103,12 @@ export const OfficerDashboard = () => {
       toast.error('Failed to delete feedback form');
     }
   };
+    
+  const [postData, setPostData] = useState({
+  title: "",
+  message: "",
+  image: null
+});
 
   if (!analytics || !students) return <div className="flex items-center justify-center h-screen">Loading...</div>;
 
@@ -143,12 +153,12 @@ export const OfficerDashboard = () => {
               <DialogHeader>
                 <DialogTitle>Post Placement Update</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreateNotification} className="space-y-4">
+              <form onSubmit={handlePostUpdate} className="space-y-4">
                 <div>
                   <Label>Title</Label>
                   <Input
-                    value={newNotification.title}
-                    onChange={(e) => setNewNotification({ ...newNotification, title: e.target.value })}
+                    value={postData.title}
+                    onChange={(e) => setPostData({ ...postData, title: e.target.value })}
                     required
                     placeholder="e.g., New Placement Drive Announced"
                   />
@@ -156,12 +166,24 @@ export const OfficerDashboard = () => {
                 <div>
                   <Label>Message</Label>
                   <Input
-                    value={newNotification.message}
-                    onChange={(e) => setNewNotification({ ...newNotification, message: e.target.value })}
+                    value={postData.message}
+                    onChange={(e) => setPostData({ ...postData, message: e.target.value })}
                     required
                     placeholder="Details about the update..."
                   />
                 </div>
+                <div>
+                  <Label>Upload Image</Label>
+                  <Input type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setPostData({
+                      ...postData,
+                      image: e.target.files[0]
+                    })
+                  }
+                  />
+                  </div>
                 <Button type="submit" className="w-full">Post Notification</Button>
               </form>
             </DialogContent>
