@@ -79,30 +79,35 @@ export const StudentDashboard = () => {
         <p className="text-gray-600 mt-1">{user?.branch} • {user?.year || 'Year not set'}</p>
       </div>
 
-      {notifications.length > 0 && (
-        <Card className="mb-8 border-blue-200 bg-blue-50" data-testid="notifications-section">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Briefcase className="text-blue-600" size={20} />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-blue-900 mb-1">📢 Placement Updates</h3>
-                <div className="space-y-2">
-                  {notifications.map((notif) => (
-                    <div key={notif.id} className="bg-white p-3 rounded-lg border border-blue-200" data-testid={`notification-${notif.id}`}>
-                      <p className="font-medium text-sm">{notif.title}</p>
-                      <p className="text-xs text-gray-600 mt-1">{notif.message}</p>
-                      <p className="text-xs text-gray-500 mt-1">{new Date(notif.created_at).toLocaleDateString()}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+{notifications.length > 0 && (
+  <div className="mb-8">
 
+    <h2 className="text-lg font-semibold mb-3">📢 Placement Updates</h2>
+
+    {notifications.map((update, index) => (
+      <div key={index} className="bg-white p-4 rounded-lg shadow mb-3">
+
+        <h3 className="font-semibold text-lg">{update.title}</h3>
+        <p className="text-gray-600">{update.message}</p>
+
+        {/* IMAGE */}
+        {update.image_url && (
+          <img
+            src={`${API}${update.image_url}`}
+            alt="update"
+            className="mt-3 rounded-lg max-h-[200px]"
+          />
+        )}
+
+        <p className="text-xs text-gray-400 mt-2">
+          {new Date(update.created_at).toLocaleDateString()}
+        </p>
+
+      </div>
+    ))}
+
+  </div>
+)}
       {feedbackForms.length > 0 && (
         <Card className="mb-8 border-blue-200 bg-blue-50" data-testid="feedback-needed-section">
           <CardContent className="pt-6">
