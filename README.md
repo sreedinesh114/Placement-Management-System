@@ -171,8 +171,7 @@ Company Logo Upload
 Admin Dashboard
 
 Author
-
-Dinesh S
+K.C.Deepa Lakshmi
 
 GitHub:
-https://github.com/sreedinesh114
+https://github.com/Deepalakshmi0909
